@@ -5,8 +5,59 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
-	"text/template"
 )
+
+const webapp = `
+package gowebview
+
+import (
+	"log"
+	"net"
+	"net/http"
+	"time"
+
+	//importing the users package that will attach the handlers to the DefaultServeMux
+	_ "{import}"
+)
+
+//App is an exported class whitch can be used from native java code to control the http server
+type App struct {
+	server *http.Server
+}
+
+//NewApp initializes and returns an new App
+func NewApp() *App {
+	return &App{
+		server: &http.Server{
+			Addr:           "127.0.0.1:0",
+			Handler:        http.DefaultServeMux,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   10 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+		},
+	}
+}
+
+//Start is called by the native portion of the webapp to start the web server.
+//It returns the server root URL (without the trailing slash) and any errors.
+func (app *App) Start() (string, error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	go func() {
+		err = app.server.Serve(listener)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}()
+	return listener.Addr().String(), nil
+}
+
+//Stop is called by the native portion of the webapp to stop the web server.
+func (app *App) Stop() {
+	//waiting for app.server.Close() in 1.8
+}`
 
 func buildDotGradle(b []byte) ([]byte, error) {
 	b = bytes.Replace(b, []byte("runProguard false"), []byte("minifyEnabled true"), 1)
@@ -16,23 +67,23 @@ func buildDotGradle(b []byte) ([]byte, error) {
 const buildDotGradleTextSystem = `
 android {
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 15
     }
 }
 
 repositories {
-    flatDir{
+    flatDir {
         dirs 'libs'
     }
 }
 
 dependencies {
-    compile(name:'backend', ext:'aar')
+    compile(name:'gowebview', ext:'aar')
 }
 
 task genGoMobileAAR(type:Exec) {
-  workingDir '..'
-  commandLine 'gomobile', 'bind', '-o', 'androidapp/libs/backend.aar', '.'
+  workingDir '.'
+  commandLine 'gomobile', 'bind', '-o', 'libs/gowebview.aar', '.'
 }
 
 preBuild.dependsOn(genGoMobileAAR)
@@ -68,26 +119,8 @@ const androidManifestDotXMLTextSystem = `
 
 `
 
-func mainDotJava([]byte) ([]byte, error) {
-	tmpl := template.Must(template.New("mainDotJavaText").Parse(mainDotJavaTextSystem))
-	params := struct {
-		PkgPath string
-		PkgName string
-		ClsName string
-	}{
-		PkgPath: pkgPath,
-		PkgName: pkgName,
-		ClsName: strings.ToTitle(pkgName),
-	}
-	buf := bytes.Buffer{}
-	if err := tmpl.Execute(&buf, params); err != nil {
-		return nil, fmt.Errorf("error writing main.java :%s", err)
-	}
-	return buf.Bytes(), nil
-}
-
-const mainDotJavaTextSystem = `
-package {{.PkgPath}};
+const mainDotJava = `
+package gowebview;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -95,18 +128,20 @@ import android.view.KeyEvent;
 import android.webkit.WebSettings;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
-
 import android.webkit.WebView;
-import go.{{.PkgName}}.{{.ClsName}};
+
+import gowebview.App;
+import gowebview.Gowebview;
 
 public class Main extends Activity {
     private WebView mWebView;
-	private {{.ClsName}}.App mSrv;
+	private App mSrv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mWebView = new WebView(this);
+		mSrv = Gowebview.newApp();
 		WebSettings webSettings = mWebView.getSettings();
 		webSettings.setJavaScriptEnabled(true);
 		mWebView.setWebViewClient(new WebViewClient());
@@ -117,11 +152,10 @@ public class Main extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-		mSrv = {{.ClsName}}.NewApp();
         try {
-			mWebView.loadUrl(mSrv.Start() + "/");
+			mWebView.loadUrl(mSrv.start() + "/");
         } catch (Exception e) {
-            Toast.makeText(this,"Error:"+e.toString(),Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"Error:" + e.toString(),Toast.LENGTH_LONG).show();
             e.printStackTrace();
             this.finish();
         }
@@ -132,7 +166,7 @@ public class Main extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-		mSrv.Stop();
+		mSrv.stop();
     }
 
     @Override

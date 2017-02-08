@@ -1,77 +1,10 @@
-/*
-Command mobilehtml5app generates a simple framework to develop Go language
-mobile applications with HTML5 based frontends using WebViews and a golang
-backend. It currently supports Android only.
-
-Usage
-
-First create a folder within your GOPATH where you want your project to reside
-and chdir into it. From within this folder run the mobilehtml5app command
-as discussed in the platform specific sections below. This generates a
-Go language HTTP server scaffolding for your app and a mobile platform specific
-App project with a WebView that loads webpages from the server.
-
-Under the hoods, the command will generate a file webapp.go that exports Start()
-and Stop() functions to start and stop the backend server which are called by
-lifecycle function hooks of the native portion of the App which houses the webview
-The file webapp.go also will have two sample handlers to illustrate how to
-create and register your HTTP handlers. The gomobile bind command is used
-to generate the required shared library and is hooked up to the native build
-process to automatically re-build the go shared library.
-
-The webapp uses an server that integrates graceful shutdown and parameterized routing. It
-requires handlers to satisfy the ContextHandler interface similar to http.Handler but
-taking a context.Context as the first parameter. Server shutdown is signaled (when
-the user closes the app etc.) by the Done() channel in the Context being closed
-and handlers that spawn long-running processes should check for it. Named routing
-parameters and any custom server instance specific settings are also passed
-as through the Context and can be accessed via Context.Value(). For more details
-on the server see http://godoc.org/github.com/srinathh/mobilehtml5app/server
-
-You may want to set the environment variable $GO15VENDOREXPERIMENT=1 to use
-the vendored versions of the packages github.com/julienschmidt/httprouter and
-github.com/tylerb/graceful which are used in the Server.
-
-Android apps
-
-To create an Android project run the following command in the project folder
-you create for your mobile app under your GOPATH.
-
-	mobilehtml5app -apitarget <Build API Target> -name <Project Name>
-
-This will generate webapp.go and an Android gradle based project in a subfolder
-called androidapp. You can build the Android project thorugh the command line. To
-work with it it in Android Studio, make sure to select "Import Project" in the
-first screen rather than "Open Project".
-
-There are two options for the WebView - the Android System WebView or the
-Apache CrossWalk project XWalkView. The Android System WebView is a reliable
-HTML5 platform only if you are targeting Android Kit-Kat (4.4) or higher devices
-in which the WebView is based on Chromium. The CrossWalk project XWalkView has
-compatibility from Android Ice Cream Sandwitch (4.0) version onwards and is the
-default version used.
-
-The full set of command line options for building Android apps are:
-	-apitarget string
-		Required. Android build target. To list possible targets run
-		$ANDROID_HOME/tools/android list targets
-	-gradle string
-		Optional. Gradle version. (default "2.4")
-	-name string
-		Required. Android project name composed of a-z A-Z 0-9 _
-	-plugin string
-		Optional. Android gradle plugin version. (default "1.3.0")
-	-target string
-		Optional. Supports only android for now. (default "android")
-	-title string
-		Optional. App Title defaults to -name if omitted.
-*/
 package main
 
 import (
 	"bytes"
 	"flag"
 	"go/build"
+	"go/format"
 	"io/ioutil"
 	"log"
 	"os"
@@ -82,13 +15,9 @@ import (
 )
 
 var (
-	name      = flag.String("name", "", "Required. Android project name")
 	apitarget = flag.String("apitarget", "", "Required. Android build target. To list possible targets run $ANDROID_HOME/tools/android list targets")
 	gradle    = flag.String("gradle", "2.4", "Gradle version")
 	plugin    = flag.String("plugin", "1.3.0", "Android gradle plugin version")
-	title     = flag.String("title", "", "Optional. App Title defaults to -name if omitted.")
-	pkgPath   string
-	pkgName   string
 )
 
 type modBytes func([]byte) ([]byte, error)
@@ -125,6 +54,11 @@ func javaImportPath(goImportPath string) string {
 func main() {
 	flag.Parse()
 
+	if *apitarget == "" {
+		log.Fatalf("-target must be specified")
+		return
+	}
+
 	// Check for existance of the android tool in the sdk path
 	toolPath := filepath.Join(os.Getenv("ANDROID_HOME"), "tools", "android")
 	if runtime.GOOS == "windows" {
@@ -132,17 +66,6 @@ func main() {
 	}
 	if _, err := os.Stat(toolPath); err != nil {
 		log.Fatalf("couldn't find %s. Environment variable ANDROID_HOME must be defined and point to a valid Android SDK folder", toolPath)
-		return
-	}
-
-	// -name and -apitarget must be provided
-	if *name == "" {
-		log.Fatalf("-name must be specified")
-		return
-	}
-
-	if *apitarget == "" {
-		log.Fatalf("-target must be specified")
 		return
 	}
 
@@ -154,33 +77,32 @@ func main() {
 		return
 	}
 
-	pkgName = filepath.Base(wd)
-	pkg, err := build.ImportDir(wd, build.FindOnly)
+	pkg, err := build.ImportDir(wd, build.IgnoreVendor)
 	if err != nil || pkg.ImportPath == "" {
 		log.Fatalf("could not derive package path from import path")
 		return
 	}
-	pkgPath = javaImportPath(pkg.ImportPath) + ".androidapp"
+	pkgPath := javaImportPath(pkg.ImportPath) + ".androidapp"
 
-	if *title == "" {
-		title = name
-	}
 	outPath := "./androidapp"
 
 	// Project Generation: Run the android tool and then generate the go files
 	var out []byte
-	if out, err = exec.Command(toolPath, "create", "project", "--name", *name, "--package", pkgPath, "--activity", "Main", "--target", *apitarget, "--gradle", "--gradle-version", *plugin, "--path", outPath).CombinedOutput(); err != nil {
+	if out, err = exec.Command(toolPath, "create", "project", "--name", pkg.Name,
+		"--package", pkgPath, "--activity", "Main", "--target", *apitarget,
+		"--gradle", "--gradle-version", *plugin, "--path", outPath,
+	).CombinedOutput(); err != nil {
 		log.Fatalf("error in android tool: %s\n%s", err, out)
 		return
 	}
 
-	// build.gradle: add dependencies for gomobile bind and XWalkView; fix minifyEnabled
+	// build.gradle: add dependencies for gomobile bind; fix minifyEnabled
 	modFile(filepath.Join(outPath, "build.gradle"), buildDotGradle)
 
 	// libs: create the folder
 	libsPath := filepath.Join(outPath, "libs")
-	if _, err := os.Stat(libsPath); os.IsNotExist(err) {
-		if err := os.Mkdir(libsPath, os.ModeDir|0775); err != nil {
+	if _, err = os.Stat(libsPath); os.IsNotExist(err) {
+		if err = os.Mkdir(libsPath, os.ModeDir|0775); err != nil {
 			log.Fatalf("unable to create libs folder: %v", err)
 			return
 		}
@@ -194,11 +116,11 @@ func main() {
 
 	// strings.xml: modify the value of app_name to title
 	modFile(filepath.Join(outPath, "src", "main", "res", "values", "strings.xml"), func(b []byte) ([]byte, error) {
-		return bytes.Replace(b, []byte("Main"), []byte(*title), 1), nil
+		return bytes.Replace(b, []byte("Main"), []byte(pkg.Name), 1), nil
 	})
 
 	// main.xml: remove the current layout file
-	if err := os.Remove(filepath.Join(outPath, "src", "main", "res", "layout", "main.xml")); err != nil {
+	if err = os.Remove(filepath.Join(outPath, "src", "main", "res", "layout", "main.xml")); err != nil {
 		log.Fatalf("unable to remove main.xml: %s", err)
 		return
 	}
@@ -209,16 +131,31 @@ func main() {
 		fpath = filepath.Join(fpath, s)
 	}
 	fpath = filepath.Join(fpath, "Main.java")
-	modFile(fpath, mainDotJava)
+	if err = ioutil.WriteFile(fpath, []byte(mainDotJava), 0644); err != nil {
+		log.Fatalf("unable to write Main.java: %s", err)
+		return
+	}
 
-	// and generate backend.aar
-	if out, err := exec.Command("gomobile", "bind", "-o", filepath.Join(outPath, "libs", "backend.aar"), ".").CombinedOutput(); err != nil {
-		log.Fatalf("could not generate libs/backend.aar: %s: %s", err, out)
+	//writing the server.go file, the server has Start and Stop exported functions to control the http server
+	//it also imports the users package that will setup the DefaultServeMux
+	srccode, err := format.Source(bytes.Replace([]byte(webapp), []byte("{import}"), []byte(pkg.ImportPath), 1))
+	if err != nil {
+		log.Fatalf("unable to write server.go: %s", err)
+		return
+	}
+	if err = ioutil.WriteFile("./androidapp/webapp.go", srccode, 0644); err != nil {
+		log.Fatalf("unable to write server.go: %s", err)
+		return
+	}
+
+	// and generate gowebview.aar
+	if out, err = exec.Command("gomobile", "bind", "-o", filepath.Join(outPath, "libs", "gowebview.aar"), "./androidapp").CombinedOutput(); err != nil {
+		log.Fatalf("could not generate libs/gowebview.aar: %s: %s", err, out)
 		return
 	}
 
 	// write a gitignore so we don't checkin local properties or build files
-	if err := ioutil.WriteFile(filepath.Join(outPath, ".gitignore"), []byte(gitignore), 0644); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(outPath, ".gitignore"), []byte(gitignore), 0644); err != nil {
 		log.Fatalf("error writing .gitignore:%s", err)
 		return
 	}
