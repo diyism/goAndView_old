@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"go/build"
 	"go/format"
 	"io/ioutil"
@@ -14,9 +15,11 @@ import (
 	"strings"
 )
 
+const buildPath = "build"
+
 var (
 	apitarget = flag.String("apitarget", "", "Required. Android build target. To list possible targets run $ANDROID_HOME/tools/android list targets")
-	gradle    = flag.String("gradle", "2.4", "Gradle version")
+	gradle    = flag.String("gradle", "2.2", "Gradle version")
 	plugin    = flag.String("plugin", "1.3.0", "Android gradle plugin version")
 )
 
@@ -82,12 +85,15 @@ func main() {
 		log.Fatalf("could not derive package path from import path")
 		return
 	}
-	pkgPath := javaImportPath(pkg.ImportPath) + ".androidapp"
+	pkgPath := javaImportPath(pkg.ImportPath) + "." + buildPath
 
-	outPath := "./androidapp"
+	outPath := "./" + buildPath
 
 	// Project Generation: Run the android tool and then generate the go files
 	var out []byte
+	fmt.Println(toolPath, "create", "project", "--name", pkg.Name,
+		"--package", pkgPath, "--activity", "Main", "--target", *apitarget,
+		"--gradle", "--gradle-version", *plugin, "--path", outPath)
 	if out, err = exec.Command(toolPath, "create", "project", "--name", pkg.Name,
 		"--package", pkgPath, "--activity", "Main", "--target", *apitarget,
 		"--gradle", "--gradle-version", *plugin, "--path", outPath,
@@ -95,6 +101,7 @@ func main() {
 		log.Fatalf("error in android tool: %s\n%s", err, out)
 		return
 	}
+	fmt.Println(string(out))
 
 	// build.gradle: add dependencies for gomobile bind; fix minifyEnabled
 	modFile(filepath.Join(outPath, "build.gradle"), buildDotGradle)
@@ -143,16 +150,17 @@ func main() {
 		log.Fatalf("unable to write server.go: %s", err)
 		return
 	}
-	if err = ioutil.WriteFile("./androidapp/webapp.go", srccode, 0644); err != nil {
+	if err = ioutil.WriteFile("./"+buildPath+"/webapp.go", srccode, 0644); err != nil {
 		log.Fatalf("unable to write server.go: %s", err)
 		return
 	}
 
 	// and generate gowebview.aar
-	if out, err = exec.Command("gomobile", "bind", "-o", filepath.Join(outPath, "libs", "gowebview.aar"), "./androidapp").CombinedOutput(); err != nil {
+	if out, err = exec.Command("gomobile", "bind", "-o", filepath.Join(outPath, "libs", "gowebview.aar"), "./"+buildPath).CombinedOutput(); err != nil {
 		log.Fatalf("could not generate libs/gowebview.aar: %s: %s", err, out)
 		return
 	}
+	fmt.Println(string(out))
 
 	// write a gitignore so we don't checkin local properties or build files
 	if err = ioutil.WriteFile(filepath.Join(outPath, ".gitignore"), []byte(gitignore), 0644); err != nil {
