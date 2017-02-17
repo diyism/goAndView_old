@@ -18,9 +18,9 @@ import (
 const buildPath = "build"
 
 var (
-	apitarget = flag.String("apitarget", "", "Required. Android build target. To list possible targets run $ANDROID_HOME/tools/android list targets")
-	gradle    = flag.String("gradle", "2.2", "Gradle version")
-	plugin    = flag.String("plugin", "1.3.0", "Android gradle plugin version")
+	apitarget = flag.String("target", "", "Required. Android build target. To list possible targets run $ANDROID_HOME/tools/android list targets")
+	gradle    = flag.String("gradle", "2.14.1", "Gradle version")
+	plugin    = flag.String("plugin", "2.2.3", "Android gradle plugin version")
 )
 
 type modBytes func([]byte) ([]byte, error)

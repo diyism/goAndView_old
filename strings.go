@@ -20,42 +20,33 @@ import (
 	_ "{import}"
 )
 
-//App is an exported class whitch can be used from native java code to control the http server
-type App struct {
-	server *http.Server
-}
-
-//NewApp initializes and returns an new App
-func NewApp() *App {
-	return &App{
-		server: &http.Server{
-			Addr:           "127.0.0.1:0",
-			Handler:        http.DefaultServeMux,
-			ReadTimeout:    10 * time.Second,
-			WriteTimeout:   10 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-		},
-	}
+var server = &http.Server{
+	Addr:           "127.0.0.1:0",
+	Handler:        http.DefaultServeMux,
+	ReadTimeout:    10 * time.Second,
+	WriteTimeout:   10 * time.Second,
+	MaxHeaderBytes: 1 << 20,
 }
 
 //Start is called by the native portion of the webapp to start the web server.
 //It returns the server root URL (without the trailing slash) and any errors.
-func (app *App) Start() (string, error) {
+func Start() string {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		log.Fatalln(err)
 	}
 	go func() {
-		err = app.server.Serve(listener)
+		err = server.Serve(listener)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
-	return listener.Addr().String(), nil
+	return listener.Addr().String()
 }
 
 //Stop is called by the native portion of the webapp to stop the web server.
-func (app *App) Stop() {
+func Stop() {
+	println("stop")
 	//waiting for app.server.Close() in 1.8
 }`
 
@@ -130,18 +121,15 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 import android.webkit.WebView;
 
-import gowebview.App;
 import gowebview.Gowebview;
 
 public class Main extends Activity {
     private WebView mWebView;
-	private App mSrv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mWebView = new WebView(this);
-		mSrv = Gowebview.newApp();
 		WebSettings webSettings = mWebView.getSettings();
 		webSettings.setJavaScriptEnabled(true);
 		mWebView.setWebViewClient(new WebViewClient());
@@ -153,7 +141,8 @@ public class Main extends Activity {
     protected void onResume() {
         super.onResume();
         try {
-			mWebView.loadUrl(mSrv.start() + "/");
+			String address = Gowebview.start();
+			mWebView.loadUrl("http://" + address + "/");
         } catch (Exception e) {
             Toast.makeText(this,"Error:" + e.toString(),Toast.LENGTH_LONG).show();
             e.printStackTrace();
@@ -166,7 +155,7 @@ public class Main extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-		mSrv.stop();
+		Gowebview.stop();
     }
 
     @Override
