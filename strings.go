@@ -46,8 +46,7 @@ func Start() string {
 
 //Stop is called by the native portion of the webapp to stop the web server.
 func Stop() {
-	println("stop")
-	//waiting for app.server.Close() in 1.8
+	server.Close()
 }`
 
 func buildDotGradle(b []byte) ([]byte, error) {
