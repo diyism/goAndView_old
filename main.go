@@ -19,7 +19,7 @@ const buildPath = "build"
 
 var (
 	apitarget = flag.String("target", "", "Required. Android build target. To list possible targets run $ANDROID_HOME/tools/android list targets")
-	gradle    = flag.String("gradle", "2.14.1", "Gradle version")
+	gradle    = flag.String("gradle", "3.4", "Gradle version")
 	plugin    = flag.String("plugin", "2.2.3", "Android gradle plugin version")
 )
 
@@ -138,7 +138,9 @@ func main() {
 		fpath = filepath.Join(fpath, s)
 	}
 	fpath = filepath.Join(fpath, "Main.java")
-	if err = ioutil.WriteFile(fpath, []byte(mainDotJava), 0644); err != nil {
+
+	mainDotJavaBytes := bytes.Replace([]byte(mainDotJava), []byte("{package}"), []byte(pkgPath), 1)
+	if err = ioutil.WriteFile(fpath, mainDotJavaBytes, 0644); err != nil {
 		log.Fatalf("unable to write Main.java: %s", err)
 		return
 	}
@@ -156,7 +158,10 @@ func main() {
 	}
 
 	// and generate gowebview.aar
-	if out, err = exec.Command("gomobile", "bind", "-o", filepath.Join(outPath, "libs", "gowebview.aar"), "./"+buildPath).CombinedOutput(); err != nil {
+	aarPath := filepath.Join(outPath, "libs", "gowebview.aar")
+	buildPkgPath := filepath.Join(pkg.ImportPath, buildPath)
+	fmt.Println("gomobile", "bind", "-o", aarPath, buildPkgPath)
+	if out, err = exec.Command("gomobile", "bind", "-o", aarPath, buildPkgPath).CombinedOutput(); err != nil {
 		log.Fatalf("could not generate libs/gowebview.aar: %s: %s", err, out)
 		return
 	}

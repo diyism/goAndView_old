@@ -52,6 +52,7 @@ func Stop() {
 
 func buildDotGradle(b []byte) ([]byte, error) {
 	b = bytes.Replace(b, []byte("runProguard false"), []byte("minifyEnabled true"), 1)
+	b = bytes.Replace(b, []byte("mavenCentral"), []byte("jcenter"), 1)
 	return append(b, []byte(buildDotGradleTextSystem)...), nil
 }
 
@@ -94,24 +95,17 @@ func gradlewrapperDotProperties(b []byte) ([]byte, error) {
 }
 
 func androidManifestDotXML(b []byte) ([]byte, error) {
-	i := bytes.Index(b, []byte("<application"))
-	if i < 0 {
-		return nil, fmt.Errorf("Could not find <application tag in AndroidManifest.xml")
-	}
-	buf := bytes.Buffer{}
-	buf.Write(b[:i])
-	buf.Write([]byte(androidManifestDotXMLTextSystem))
-	buf.Write(b[i:])
-	return buf.Bytes(), nil
+	return bytes.Replace(b, []byte("<application"), []byte(androidManifestDotXMLTextSystem), 1), nil
 }
 
 const androidManifestDotXMLTextSystem = `
     <uses-permission android:name="android.permission.INTERNET" />
 
+	<application android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen"
 `
 
 const mainDotJava = `
-package gowebview;
+package {package};
 
 import android.app.Activity;
 import android.os.Bundle;
