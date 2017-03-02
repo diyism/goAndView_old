@@ -46,3 +46,6 @@ You can now install your brand new android application:
 ```
 $ adb install -r build/outputs/apk/build-debug.apk
 ```
+Enjoy your awesome app:
+
+![screenshot](https://github.com/microo8/gowebview/raw/master/screenshot.png)
