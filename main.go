@@ -159,7 +159,7 @@ func main() {
 
 	// and generate gowebview.aar
 	aarPath := filepath.Join(outPath, "libs", "gowebview.aar")
-	buildPkgPath := filepath.Join(pkg.ImportPath, buildPath)
+	buildPkgPath := filepath.ToSlash(filepath.Join(pkg.ImportPath, buildPath))
 	fmt.Println("gomobile", "bind", "-o", aarPath, buildPkgPath)
 	if out, err = exec.Command("gomobile", "bind", "-o", aarPath, buildPkgPath).CombinedOutput(); err != nil {
 		log.Fatalf("could not generate libs/gowebview.aar: %s: %s", err, out)
