@@ -4,6 +4,7 @@ Tool to create an android application from an go http server package. The packag
 
 ## prerequisites
 download and install android [sdk](https://developer.android.com/studio/index.html#downloads) and [ndk](https://developer.android.com/ndk/downloads/index.html)
+download old android sdk tools to overwrite new version in $ANDROID_SDK_ROOT/tools (https://dl.google.com/android/repository/tools_r25.2.2-linux.zip)
 
 gomobile: `go get -u golang.org/x/mobile/...`
 
