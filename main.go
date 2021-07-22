@@ -18,7 +18,7 @@ import (
 const buildPath = "build"
 
 var (
-	apitarget = flag.String("target", "", "Required. Android build target. To list possible targets run $ANDROID_HOME/tools/android list targets")
+	apitarget = flag.String("target", "", "Required. Android build target. To list possible targets run $ANDROID_SDK_ROOT/tools/android list targets")
 	gradle    = flag.String("gradle", "3.4", "Gradle version")
 	plugin    = flag.String("plugin", "2.2.3", "Android gradle plugin version")
 )
@@ -63,12 +63,12 @@ func main() {
 	}
 
 	// Check for existance of the android tool in the sdk path
-	toolPath := filepath.Join(os.Getenv("ANDROID_HOME"), "tools", "android")
+	toolPath := filepath.Join(os.Getenv("ANDROID_SDK_ROOT"), "tools", "android")
 	if runtime.GOOS == "windows" {
 		toolPath = toolPath + ".bat"
 	}
 	if _, err := os.Stat(toolPath); err != nil {
-		log.Fatalf("couldn't find %s. Environment variable ANDROID_HOME must be defined and point to a valid Android SDK folder", toolPath)
+		log.Fatalf("couldn't find %s. Environment variable ANDROID_SDK_ROOT must be defined and point to a valid Android SDK folder", toolPath)
 		return
 	}
 

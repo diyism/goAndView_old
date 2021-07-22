@@ -9,8 +9,8 @@ gomobile: `go get -u golang.org/x/mobile/...`
 
 set environment variables:
 - `JAVA_HOME` - where the `javac` is
-- `ANDROID_HOME` - android sdk path
-- `ANDROID_NDK_ROOT` - android ndk path
+- `ANDROID_SDK_ROOT` - android sdk path
+- `ANDROID_NDK_HOME` - android ndk path
 
 example http package that sets the '/' path:
 ```go
@@ -26,11 +26,11 @@ func init() {
 	//or you can also use your favorite router and then paste it to http.DefaultServeMux
 }
 ```
-Check the ID of the target android API with `$ $ANDROID_HOME/tools/android list target`. It will be eg. 13.
+Check the ID of the target android API with `$ $ANDROID_SDK_ROOT/tools/android list target`. It will be eg. 13.
 
 Then go to the package directory and run:
 ```bash
-$ gomobile init -ndk $ANDROID_NDK_ROOT
+$ gomobile init -ndk $ANDROID_NDK_HOME
 $ gowebview -target 13
 ```
 
