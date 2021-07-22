@@ -30,6 +30,7 @@ Check the ID of the target android API with `$ $ANDROID_SDK_ROOT/tools/android l
 
 Then go to the package directory and run:
 ```bash
+$ go mod init main
 $ go get -u golang.org/x/mobile/cmd/gobind
 $ gomobile init
 $ gowebview -target 13
