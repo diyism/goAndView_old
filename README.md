@@ -34,7 +34,7 @@ $ go mod init gowebview
 $ go build
 $ go get -u golang.org/x/mobile/cmd/gobind
 $ gomobile init
-$ gowebview -target 13
+$ ./gowebview -target 13
 ```
 
 `gowebview` creates an [gradle](https://gradle.org/) project in build directory.
