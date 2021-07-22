@@ -1,4 +1,4 @@
-# gowebview
+# goAndView
 
 Tool to create an android application from an go http server package. The package must just set some endpoints.
 
