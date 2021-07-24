@@ -33,10 +33,9 @@ Check the ID of the target android API with `$ $ANDROID_SDK_ROOT/tools/android l
 Then go to the package directory and run:
 ```bash
 $ go mod init goAndView
-$ go build
 $ go get -u golang.org/x/mobile/cmd/gobind
 $ gomobile init
-$ ./goAndView -target 13
+$ go run ./ -target 13
 ```
 
 `gowebview` creates an [gradle](https://gradle.org/) project in build directory.
