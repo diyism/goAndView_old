@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"encoding/json"
 )
 
 const buildPath = "build"
@@ -54,6 +55,11 @@ func javaImportPath(goImportPath string) string {
 	return ret
 }
 
+func prettyPrint(i interface{}) string
+{   s, _ := json.MarshalIndent(i, "", "\t")
+    return string(s)
+}
+
 func main() {
 	flag.Parse()
 
@@ -85,7 +91,7 @@ func main() {
 		log.Fatalf("could not derive package path from import path")
 		return
 	}
-	pkgPath := javaImportPath(pkg.ImportPath) + "." + buildPath
+	pkgPath := "com."+buildPath //javaImportPath(pkg.ImportPath) + "." + buildPath
 
 	outPath := "./" + buildPath
 
@@ -159,9 +165,12 @@ func main() {
 
 	// and generate gowebview.aar
 	aarPath := filepath.Join(outPath, "libs", "gowebview.aar")
-	buildPkgPath := filepath.ToSlash(filepath.Join(pkg.ImportPath, buildPath))
-	fmt.Println("gomobile", "bind", "-o", aarPath, buildPkgPath)
-	if out, err = exec.Command("gomobile", "bind", "-o", aarPath, buildPkgPath).CombinedOutput(); err != nil {
+	buildPkgPath := filepath.ToSlash(filepath.Join(pkg.Dir, buildPath))
+	fmt.Println("gomobile", "bind", "-target", "android/arm64", "-ldflags", "-s", "-o", aarPath, buildPkgPath)
+	cmd:=exec.Command("gomobile", "bind", "-o", aarPath, buildPkgPath)
+	cmd.Env=os.Environ()
+	cmd.Env=append(cmd.Env, "ANDROID_HOME="+os.Getenv("ANDROID_SDK_ROOT"))
+	if out, err = cmd.CombinedOutput(); err != nil {
 		log.Fatalf("could not generate libs/gowebview.aar: %s: %s", err, out)
 		return
 	}

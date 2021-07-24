@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"os"
 )
 
 const webapp = `
@@ -17,7 +18,7 @@ import (
 	"time"
 
 	//importing the users package that will attach the handlers to the DefaultServeMux
-	_ "{import}"
+	//_ "{import}"
 )
 
 var server = &http.Server{
@@ -52,7 +53,8 @@ func Stop() {
 func buildDotGradle(b []byte) ([]byte, error) {
 	b = bytes.Replace(b, []byte("runProguard false"), []byte("minifyEnabled true"), 1)
 	b = bytes.Replace(b, []byte("mavenCentral"), []byte("jcenter"), 1)
-	return append(b, []byte(buildDotGradleTextSystem)...), nil
+	a:=bytes.Replace([]byte(buildDotGradleTextSystem), []byte("{ANDROID_SDK_ROOT}"), []byte(os.Getenv("ANDROID_SDK_ROOT")), 1)
+	return append(b, a...), nil
 }
 
 const buildDotGradleTextSystem = `
@@ -73,8 +75,9 @@ dependencies {
 }
 
 task genGoMobileAAR(type:Exec) {
+  environment "ANDROID_HOME", "{ANDROID_SDK_ROOT}"
   workingDir '.'
-  commandLine 'gomobile', 'bind', '-o', 'libs/gowebview.aar', '.'
+  commandLine 'gomobile', 'bind', '-target', 'android/arm64', '-ldflags', '-s', '-o', 'libs/gowebview.aar', '.'
 }
 
 preBuild.dependsOn(genGoMobileAAR)
