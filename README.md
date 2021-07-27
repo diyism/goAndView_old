@@ -7,7 +7,9 @@ download and install android [sdk](https://developer.android.com/studio/index.ht
 
 download old android sdk tools to overwrite new version in $ANDROID_SDK_ROOT/tools (https://dl.google.com/android/repository/tools_r25.2.2-linux.zip)
 
-gomobile: `go get -u golang.org/x/mobile/...`
+gomobile: 
+`go env -w GO111MODULE=auto
+go get -u golang.org/x/mobile/...`
 
 set environment variables:
 - `JAVA_HOME` - where the `javac` is
