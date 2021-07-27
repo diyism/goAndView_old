@@ -10,7 +10,8 @@ download old android sdk tools to overwrite new version in $ANDROID_SDK_ROOT/too
 gomobile: 
 ```
 go env -w GO111MODULE=auto
-go get -u golang.org/x/mobile/...
+go get golang.org/x/mobile/cmd/gomobile       #into $GOPATH/src and $GOPATH/bin
+gomobile init                                 #into $GOPATH/pkg and $GOPATH/bin
 ```
 
 set environment variables:
@@ -38,7 +39,6 @@ Then go to the package directory and run:
 ```bash
 $ go mod init goAndView
 $ go get -u golang.org/x/mobile/cmd/gobind
-$ gomobile init
 $ go run ./ -target 13
 ```
 
