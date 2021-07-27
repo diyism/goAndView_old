@@ -38,7 +38,6 @@ Check the ID of the target android API with `$ $ANDROID_SDK_ROOT/tools/android l
 Then go to the package directory and run:
 ```bash
 $ go mod init goAndView
-$ go get -u golang.org/x/mobile/cmd/gobind
 $ go run ./ -target 13
 ```
 
