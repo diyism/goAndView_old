@@ -19,6 +19,12 @@ import (
 
 	//importing the users package that will attach the handlers to the DefaultServeMux
 	//_ "{import}"
+
+    //gopkg "Java/reverse"
+	//"Java/android/os"
+
+	"os"
+	"os/exec"
 )
 
 var server = &http.Server{
@@ -42,6 +48,17 @@ func Start() string {
 			log.Fatalln(err)
 		}
 	}()
+
+	go func() {
+		var cmd=exec.Command("/sbin/su", "-c", "echo -n 200 >/sys/class/leds/vibrator/duration && echo -n 1 >/sys/class/leds/vibrator/activate")
+		cmd.Stderr=os.Stdout
+		cmd.Stdout=os.Stdout
+		err:=cmd.Run()
+		if err!=nil {
+			log.Fatalln(err)
+		}
+	}()
+
 	return listener.Addr().String()
 }
 
@@ -54,6 +71,7 @@ func buildDotGradle(b []byte) ([]byte, error) {
 	b = bytes.Replace(b, []byte("runProguard false"), []byte("minifyEnabled true"), 1)
 	b = bytes.Replace(b, []byte("mavenCentral"), []byte("jcenter"), 1)
 	a:=bytes.Replace([]byte(buildDotGradleTextSystem), []byte("{ANDROID_SDK_ROOT}"), []byte(os.Getenv("ANDROID_SDK_ROOT")), 1)
+	//a=bytes.Replace(a, []byte("{HOME}"), []byte(os.Getenv("HOME")), 1)
 	return append(b, a...), nil
 }
 

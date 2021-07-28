@@ -166,8 +166,9 @@ func main() {
 	// and generate gowebview.aar
 	aarPath := filepath.Join(outPath, "libs", "gowebview.aar")
 	buildPkgPath := filepath.ToSlash(filepath.Join(pkg.Dir, buildPath))
+	//"-bootclasspath", os.Getenv("HOME")+"/Android/Sdk/platforms/android-21/android.jar",
 	fmt.Println("gomobile", "bind", "-target", "android/arm64", "-ldflags", "-s", "-o", aarPath, buildPkgPath)
-	cmd:=exec.Command("gomobile", "bind", "-o", aarPath, buildPkgPath)
+	cmd:=exec.Command("gomobile", "bind", "-target", "android/arm64", "-ldflags", "-s", "-o", aarPath, buildPkgPath)
 	cmd.Env=os.Environ()
 	cmd.Env=append(cmd.Env, "ANDROID_HOME="+os.Getenv("ANDROID_SDK_ROOT"))
 	if out, err = cmd.CombinedOutput(); err != nil {
