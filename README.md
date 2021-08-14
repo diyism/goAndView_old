@@ -1,7 +1,7 @@
 Deprecated,  Inkeliz /gowebview is better!
 
 
-# goAndView
+# goAndView_old
 
 Tool to create an android application from an go http server package. The package must just set some endpoints.
 
