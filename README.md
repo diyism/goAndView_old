@@ -1,4 +1,4 @@
-Deprecated,  Inkeliz /gowebview is better!
+Deprecated,  "Inkeliz/gowebview" is better!
 
 
 # goAndView_old
